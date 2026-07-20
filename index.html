@@ -1,4 +1,38 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>創作ネタ app — prototype</title>
+
+<!-- Tailwind CSS (CDN / JIT, watches the DOM for class names) -->
+<script src="https://cdn.tailwindcss.com"></script>
+
+<!-- Babel (in-browser JSX transform only; ES module import/export is left untouched
+     and resolved natively by the browser via the import map below) -->
+<script src="https://unpkg.com/@babel/standalone@7.24.7/babel.min.js"></script>
+
+<!-- Import map: bare specifiers -> ESM CDN builds -->
+<script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@18.3.1",
+    "react-dom/client": "https://esm.sh/react-dom@18.3.1/client",
+    "lucide-react": "https://esm.sh/lucide-react@0.294.0?deps=react@18.3.1"
+  }
+}
+</script>
+
+<style>
+  html, body, #root { height: 100%; margin: 0; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" data-type="module" data-presets="react">
 import React, { useState, useRef, useEffect, useMemo } from "react";
+import ReactDOM from "react-dom/client";
 import {
   Search,
   Plus,
@@ -565,7 +599,7 @@ function SearchScreen({ ideas, onBack, onOpenIdea }) {
 
 // ---------------- app shell ----------------
 
-export default function IdeaAppPrototype() {
+function IdeaAppPrototype() {
   const [ideas, setIdeas] = useState(seedIdeas);
   const [draftIdea, setDraftIdea] = useState(null);
   const [view, setView] = useState("list"); // list | detail | edit | search
@@ -698,3 +732,8 @@ export default function IdeaAppPrototype() {
     </div>
   );
 }
+
+ReactDOM.createRoot(document.getElementById("root")).render(<IdeaAppPrototype />);
+</script>
+</body>
+</html>
