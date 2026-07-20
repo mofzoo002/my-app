@@ -305,9 +305,14 @@ function EditScreen({ idea, isNew, onCancel, onSave }) {
 
   useEffect(() => {
     if (isNew && titleRef.current) {
-      titleRef.current.focus();
-      titleRef.current.selectionStart = 0;
-      titleRef.current.selectionEnd = 0;
+      const el = titleRef.current;
+      el.style.textAlign = "left";
+      el.focus();
+      setTimeout(() => {
+        el.selectionStart = 0;
+        el.selectionEnd = 0;
+        el.style.textAlign = "center";
+      }, 10);
     }
   }, [isNew]);
 
