@@ -3,25 +3,9 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-<title>創作ネタ app</title>
+<title>my-app</title>
 
-<!-- PWA / "add to home screen" support -->
-<link rel="manifest" href="manifest.json" />
-<link rel="apple-touch-icon" href="icon-180.png?v=1" />
-<link rel="icon" type="image/png" sizes="512x512" href="icon-512.png?v=1" />
-<meta name="theme-color" content="#45A5FA" />
-<meta name="apple-mobile-web-app-capable" content="yes" />
-<meta name="mobile-web-app-capable" content="yes" />
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-<meta name="apple-mobile-web-app-title" content="ネタ帳" />
-<!--
-  Cache note: the "?v=1" query on the icon links is a cache-buster for browsers
-  in general, but iOS Safari specifically caches the apple-touch-icon by
-  FILENAME and largely ignores query strings for it. If you update icon-180.png
-  later and iOS still shows the old icon after "追加" from the home screen,
-  rename the file itself (e.g. icon-180-v2.png) and update the href here —
-  that's the only fully reliable way to bust the icon cache on iOS.
--->
+<link rel="apple-touch-icon" href="icon.png">
 
 <!-- Tailwind CSS (CDN / JIT, watches the DOM for class names) -->
 <script src="https://cdn.tailwindcss.com"></script>
@@ -317,17 +301,6 @@ function DetailScreen({ idea, onBack, onEdit, onDelete }) {
 function EditScreen({ idea, isNew, onCancel, onSave }) {
   const [title, setTitle] = useState(idea.title);
   const [body, setBody] = useState(idea.body);
-  const titleRef = useRef(null);
-  const bodyRef = useRef(null);
-
-  useEffect(() => {
-    const target = isNew ? titleRef.current : bodyRef.current;
-    if (target) {
-      target.focus();
-      const end = target.value.length;
-      target.setSelectionRange(end, end);
-    }
-  }, [isNew]);
 
   return (
     <div className="relative flex min-h-screen w-full flex-col">
@@ -357,41 +330,21 @@ function EditScreen({ idea, isNew, onCancel, onSave }) {
         }}
         className="mx-auto mt-2 p-5 text-[#18414D] backdrop-blur-xl"
       >
-        <div style={{ flex: "0 0 auto", position: "relative" }} className="mb-3">
-          <input
-            ref={titleRef}
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            className="w-full bg-transparent text-center text-[28px] font-bold text-[#18414D] focus:outline-none"
-          />
-          {!title && (
-            <span
-              className="pointer-events-none absolute inset-0 flex items-center justify-center text-[28px] font-bold text-white/55"
-              aria-hidden="true"
-            >
-              <span className="cursor-blink mr-1 inline-block h-[26px] w-[2px] bg-white/55" />
-              アイディア
-            </span>
-          )}
-        </div>
-        <div style={{ flex: "1 1 auto", position: "relative", minHeight: 0 }}>
-          <textarea
-            ref={bodyRef}
-            value={body}
-            onChange={(e) => setBody(e.target.value)}
-            style={{ width: "100%", height: "100%", overflowY: "auto", paddingRight: 10 }}
-            className="icy-scroll resize-none bg-transparent text-[14.5px] leading-relaxed text-[#18414D] focus:outline-none"
-          />
-          {!body && (
-            <span
-              className="pointer-events-none absolute left-0 top-0 flex items-center text-[14.5px] leading-relaxed text-white/55"
-              aria-hidden="true"
-            >
-              <span className="cursor-blink mr-0.5 inline-block h-[16px] w-[1.5px] bg-white/55" />
-              詳細
-            </span>
-          )}
-        </div>
+        <input
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          autoFocus={isNew}
+          placeholder="アイディア"
+          style={{ flex: "0 0 auto" }}
+          className="mb-3 w-full bg-transparent text-left text-[28px] font-bold text-[#18414D] placeholder:text-[#18414D]/40 focus:outline-none"
+        />
+        <textarea
+          value={body}
+          onChange={(e) => setBody(e.target.value)}
+          placeholder="詳細"
+          style={{ flex: "1 1 auto", minHeight: 0, overflowY: "auto", paddingRight: 10 }}
+          className="icy-scroll resize-none bg-transparent text-[14.5px] leading-relaxed text-[#18414D] placeholder:text-[#18414D]/40 focus:outline-none"
+        />
       </div>
       <div style={{ height: "calc(env(safe-area-inset-bottom, 0px) + 24px)" }} />
     </div>
