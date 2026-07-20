@@ -301,6 +301,15 @@ function DetailScreen({ idea, onBack, onEdit, onDelete }) {
 function EditScreen({ idea, isNew, onCancel, onSave }) {
   const [title, setTitle] = useState(idea.title);
   const [body, setBody] = useState(idea.body);
+  const titleRef = useRef(null);
+
+  useEffect(() => {
+    if (isNew && titleRef.current) {
+      titleRef.current.focus();
+      titleRef.current.selectionStart = 0;
+      titleRef.current.selectionEnd = 0;
+    }
+  }, [isNew]);
 
   return (
     <div className="relative flex min-h-screen w-full flex-col">
@@ -331,9 +340,9 @@ function EditScreen({ idea, isNew, onCancel, onSave }) {
         className="mx-auto mt-2 p-5 text-[#18414D] backdrop-blur-xl"
       >
         <input
+          ref={titleRef}
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          autoFocus={isNew}
           placeholder="アイディア"
           style={{ flex: "0 0 auto" }}
           className="mb-3 w-full bg-transparent text-center text-[28px] font-bold text-[#18414D] placeholder:text-[#18414D]/40 focus:outline-none"
