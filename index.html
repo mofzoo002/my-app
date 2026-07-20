@@ -1,0 +1,700 @@
+import React, { useState, useRef, useEffect, useMemo } from "react";
+import {
+  Search,
+  Plus,
+  ChevronLeft,
+  Pencil,
+  Check,
+  Signal,
+  Wifi,
+  BatteryFull,
+  Delete,
+  ArrowUp,
+  Globe,
+  Mic,
+  X,
+  Trash2,
+} from "lucide-react";
+
+/**
+ * 創作ネタ app — clickable prototype
+ * Screens: list (1/5) -> detail (2) -> edit (3), plus search (4)
+ * Wired to match the Figma prototype connections described by the user.
+ */
+
+// ---------------- seed data ----------------
+const seedIdeas = [
+  { id: "i1", title: "アイディア", body: "詳細\nあ\nい\nう\nえ\nお", updatedAt: "7月10日" },
+  {
+    id: "i2",
+    title: "言葉あそびメモ",
+    body:
+      "こ詳細\nあ\nい\nう\nえ\nお\n\nk\nbunny\nrabbit\nstrawberry\nケンタ新作たのしみ\nもふぞう\nもやしなむる\nあ\nころころ\n日ハム\nバナナマン日村さんいないの寂しい早く復活しますように\nグレーのもふもふかわいい\nえおかきくけこよ今日もありがとうさわげかいじゅうの",
+    updatedAt: "7月12日",
+  },
+  { id: "i3", title: "配信タイトル案", body: "今日もありがとう回\n視聴者参加型ゲーム大会", updatedAt: "7月13日" },
+  { id: "i4", title: "オチのアイディア", body: "", updatedAt: "7月14日" },
+];
+
+// ---------------- small pieces ----------------
+
+function StatusBar() {
+  return (
+    <div className="flex items-center justify-between px-7 pt-3 pb-1 text-[#19414C] select-none">
+      <span className="text-[15px] font-semibold tracking-tight">9:41</span>
+      <div className="flex items-center gap-1.5">
+        <Signal size={14} strokeWidth={2.5} />
+        <Wifi size={14} strokeWidth={2.5} />
+        <BatteryFull size={16} strokeWidth={2} />
+      </div>
+    </div>
+  );
+}
+
+function GlassIconButton({ children, onClick, label, tone = "light", size = 44 }) {
+  return (
+    <button
+      onClick={onClick}
+      aria-label={label}
+      style={
+        tone === "solid"
+          ? { width: size, height: size }
+          : {
+              width: size,
+              height: size,
+              backgroundColor: "rgba(255,255,255,0.10)",
+              border: "1px solid rgba(255,255,255,0.40)",
+              boxShadow: "inset 2px 1px 6px 0 rgba(255,255,255,0.4)",
+            }
+      }
+      className={
+        "flex shrink-0 items-center justify-center rounded-full transition-all duration-150 hover:-translate-y-0.5 active:scale-90 " +
+        (tone === "solid"
+          ? "border border-white/40 bg-white text-[#19414C] shadow-[0_4px_14px_rgba(0,0,0,0.25)] hover:bg-white/90 hover:shadow-[0_6px_18px_rgba(0,0,0,0.3)]"
+          : "text-[#19414C] backdrop-blur-xl hover:bg-white/[0.16]")
+      }
+    >
+      {children}
+    </button>
+  );
+}
+
+// iOS-style on-screen keyboard. Purely visual + functional English layout,
+// matching the reference screenshots.
+function Keyboard({ onKey, onBackspace, onSpace, onReturn, shift, onToggleShift }) {
+  const rows = [
+    ["q", "w", "e", "r", "t", "y", "u", "i", "o", "p"],
+    ["a", "s", "d", "f", "g", "h", "j", "k", "l"],
+    ["z", "x", "c", "v", "b", "n", "m"],
+  ];
+
+  const keyBase =
+    "flex items-center justify-center rounded-[9px] bg-white/90 text-[#1c2b4a] shadow-[0_1px_0_rgba(0,0,0,0.15)] transition active:scale-95 active:bg-white/60";
+  const keepFocus = (e) => e.preventDefault();
+
+  return (
+    <div className="w-full rounded-t-2xl border-t border-white/25 bg-[#274b9e]/70 px-1.5 pb-5 pt-2 backdrop-blur-xl">
+      <div className="mb-1.5 flex justify-center gap-1.5">
+        {rows[0].map((k) => (
+          <button key={k} onMouseDown={keepFocus} onClick={() => onKey(shift ? k.toUpperCase() : k)} className={keyBase + " h-10 flex-1 text-[15px] font-medium"}>
+            {shift ? k.toUpperCase() : k}
+          </button>
+        ))}
+      </div>
+      <div className="mb-1.5 flex justify-center gap-1.5 px-3">
+        {rows[1].map((k) => (
+          <button key={k} onMouseDown={keepFocus} onClick={() => onKey(shift ? k.toUpperCase() : k)} className={keyBase + " h-10 flex-1 text-[15px] font-medium"}>
+            {shift ? k.toUpperCase() : k}
+          </button>
+        ))}
+      </div>
+      <div className="mb-1.5 flex justify-center gap-1.5">
+        <button
+          onMouseDown={keepFocus}
+          onClick={onToggleShift}
+          className={keyBase + " h-10 w-10 " + (shift ? "bg-white text-[#19414C]" : "bg-white/60")}
+          aria-label="シフト"
+        >
+          <ArrowUp size={16} strokeWidth={2.5} />
+        </button>
+        {rows[2].map((k) => (
+          <button key={k} onMouseDown={keepFocus} onClick={() => onKey(shift ? k.toUpperCase() : k)} className={keyBase + " h-10 flex-1 text-[15px] font-medium"}>
+            {shift ? k.toUpperCase() : k}
+          </button>
+        ))}
+        <button onMouseDown={keepFocus} onClick={onBackspace} className={keyBase + " h-10 w-10 bg-white/60"} aria-label="削除">
+          <Delete size={16} strokeWidth={2.5} />
+        </button>
+      </div>
+      <div className="flex justify-center gap-1.5">
+        <button onMouseDown={keepFocus} className={keyBase + " h-10 w-12 text-[13px] font-medium bg-white/60"}>123</button>
+        <button onMouseDown={keepFocus} className={keyBase + " h-10 w-11 bg-white/60"}>
+          <Globe size={15} />
+        </button>
+        <button onMouseDown={keepFocus} onClick={onSpace} className={keyBase + " h-10 flex-1 text-[13px]"}>
+          space
+        </button>
+        <button onMouseDown={keepFocus} onClick={onReturn} className={keyBase + " h-10 w-16 text-[13px] font-medium bg-white/60"}>
+          return
+        </button>
+        <button onMouseDown={keepFocus} className={keyBase + " h-10 w-11 bg-white/60"}>
+          <Mic size={15} />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function IdeaGlassCard({ idea, onOpen }) {
+  const preview = idea.body.split("\n").find((l) => l.trim()) || "詳細";
+  return (
+    <button
+      onClick={onOpen}
+      style={{
+        width: 155,
+        height: 155,
+        borderRadius: 20,
+        overflow: "hidden",
+        backgroundColor: "rgba(255,255,255,0.10)",
+        border: "1px solid rgba(255,255,255,0.40)",
+        boxShadow: "inset 2px 1px 6px 0 rgba(255,255,255,0.4)",
+      }}
+      className="group flex shrink-0 flex-col p-3.5 text-left text-[#19414C] backdrop-blur-xl transition-all duration-200 hover:-translate-y-1 hover:bg-white/[0.16] active:scale-[0.97]"
+    >
+      <p className="line-clamp-2 text-[17px] font-bold leading-snug">{idea.title || "アイディア"}</p>
+      <p className="mt-1 line-clamp-5 flex-1 text-[13.5px] leading-relaxed text-[#19414C]/70">{preview}</p>
+      {idea.updatedAt && <span className="mt-2 text-[10px] font-medium text-[#19414C]/50">{idea.updatedAt}</span>}
+    </button>
+  );
+}
+
+// ---------------- screens ----------------
+
+function ListScreen({ ideas, onOpenIdea, onNewIdea, onGoSearch }) {
+  const [projectName, setProjectName] = useState("プロジェクト");
+  const [draftName, setDraftName] = useState(projectName);
+  const [editingProject, setEditingProject] = useState(false);
+  const [shift, setShift] = useState(false);
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    if (editingProject) {
+      const el = inputRef.current;
+      el?.focus();
+      const end = el?.value.length ?? 0;
+      el?.setSelectionRange(end, end);
+    }
+  }, [editingProject]);
+
+  function insert(char) {
+    setDraftName((d) => d + char);
+    setShift(false);
+  }
+  function finishEditing() {
+    setProjectName(draftName.trim() || "プロジェクト");
+    setEditingProject(false);
+  }
+
+  return (
+    <div className="relative flex h-full flex-col">
+      <StatusBar />
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 3, paddingLeft: 2, paddingRight: 2, paddingBottom: 16, paddingTop: 12 }}>
+        <GlassIconButton onClick={onGoSearch} label="検索" size={56}>
+          <Search size={20} />
+        </GlassIconButton>
+
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={() => {
+            if (editingProject) return;
+            setDraftName(projectName === "プロジェクト" ? "" : projectName);
+            setEditingProject(true);
+          }}
+          style={{
+            width: 271,
+            height: 67,
+            borderRadius: 60,
+            backgroundColor: "rgba(255,255,255,0.10)",
+            border: "1px solid rgba(255,255,255,0.40)",
+            boxShadow: "inset 2px 1px 6px 0 rgba(255,255,255,0.4)",
+          }}
+          className="flex items-center px-5 text-left text-[#19414C] backdrop-blur-xl transition hover:-translate-y-0.5 hover:bg-white/[0.16] active:scale-[0.98]"
+        >
+          {editingProject ? (
+            <input
+              ref={inputRef}
+              value={draftName}
+              onChange={(e) => setDraftName(e.target.value)}
+              onClick={(e) => e.stopPropagation()}
+              onBlur={finishEditing}
+              className="w-full bg-transparent text-[16px] font-bold text-[#19414C] focus:outline-none"
+            />
+          ) : projectName && projectName !== "プロジェクト" ? (
+            <span className="truncate text-[16px] font-bold">{projectName}</span>
+          ) : (
+            <span className="flex items-center text-[16px] font-bold" style={{ color: "#D9F3FF" }}>
+              <span className="cursor-blink mr-1 inline-block h-[18px] w-[2px]" style={{ backgroundColor: "#19414C" }} />
+              プロジェクト
+            </span>
+          )}
+        </div>
+
+        <GlassIconButton onClick={onNewIdea} label="新規追加" tone="solid" size={56}>
+          <Plus size={22} strokeWidth={2.5} />
+        </GlassIconButton>
+      </div>
+
+      <div className="flex-1 overflow-y-auto px-4 pb-4 pt-2" style={{ paddingBottom: editingProject ? 250 : 16 }}>
+        <div
+          style={{ display: "grid", gridTemplateColumns: "155px 155px", justifyContent: "center", columnGap: 24, rowGap: 20 }}
+        >
+          {ideas.map((idea) => (
+            <IdeaGlassCard key={idea.id} idea={idea} onOpen={() => onOpenIdea(idea.id)} />
+          ))}
+        </div>
+      </div>
+
+      {editingProject && (
+        <div className="absolute inset-x-0 bottom-0 keyboard-enter">
+          <Keyboard
+            onKey={insert}
+            onBackspace={() => setDraftName((d) => d.slice(0, -1))}
+            onSpace={() => insert(" ")}
+            onReturn={finishEditing}
+            shift={shift}
+            onToggleShift={() => setShift((s) => !s)}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DetailScreen({ idea, onBack, onEdit, onDelete }) {
+  const [confirming, setConfirming] = useState(false);
+
+  return (
+    <div className="flex h-full flex-col">
+      <StatusBar />
+      <div className="flex items-center justify-between px-3 pb-2 pt-3">
+        <GlassIconButton onClick={onBack} label="戻る">
+          <ChevronLeft size={20} />
+        </GlassIconButton>
+        <GlassIconButton onClick={onEdit} label="編集">
+          <Pencil size={17} />
+        </GlassIconButton>
+      </div>
+
+      <div className="relative mx-auto mt-2" style={{ width: 334, height: 717 }}>
+        <div
+          style={{
+            width: 334,
+            height: 717,
+            borderRadius: 20,
+            overflowY: "auto",
+            overflowX: "hidden",
+            backgroundColor: "rgba(255,255,255,0.10)",
+            border: "1px solid rgba(255,255,255,0.40)",
+            boxShadow: "inset 2px 1px 6px 0 rgba(255,255,255,0.4)",
+          }}
+          className="icy-scroll flex flex-col p-5 pb-16 text-left text-[#19414C] backdrop-blur-xl"
+        >
+          <h1 className="mb-3 text-center text-[28px] font-bold">{idea.title || "アイディア"}</h1>
+          <p className="flex-1 whitespace-pre-wrap text-[14.5px] leading-relaxed text-[#19414C]/85">
+            {idea.body || "詳細"}
+          </p>
+        </div>
+
+        <div className="absolute inset-x-0 bottom-4 flex justify-center">
+          {confirming ? (
+            <div
+              onClick={(e) => e.stopPropagation()}
+              className="flex items-center gap-3 rounded-full border border-white/40 bg-white/25 px-4 py-2 backdrop-blur-md"
+            >
+              <span className="text-[13px] font-bold text-[#19414C]">削除しますか？</span>
+              <button
+                onClick={() => {
+                  setConfirming(false);
+                  onDelete();
+                }}
+                className="rounded-full bg-[#e35b5b] px-3 py-1 text-[12px] font-bold text-white transition-all hover:-translate-y-0.5 active:scale-95"
+              >
+                はい
+              </button>
+              <button
+                onClick={() => setConfirming(false)}
+                className="rounded-full border border-white/50 px-3 py-1 text-[12px] font-bold text-[#19414C] transition-all hover:-translate-y-0.5 active:scale-95"
+              >
+                いいえ
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setConfirming(true)}
+              className="flex items-center gap-1.5 rounded-full border border-white/40 bg-white/20 px-5 py-2 text-[13px] font-bold text-[#19414C] backdrop-blur-md transition-all hover:-translate-y-0.5 hover:bg-white/35 active:scale-95"
+            >
+              <Trash2 size={15} />
+              このアイディアを削除
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function EditScreen({ idea, onCancel, onSave }) {
+  const [title, setTitle] = useState(idea.title);
+  const [body, setBody] = useState(idea.body);
+  const [activeField, setActiveField] = useState("body");
+  const [shift, setShift] = useState(false);
+  const [keyboardOpen, setKeyboardOpen] = useState(true);
+  const titleRef = useRef(null);
+  const bodyRef = useRef(null);
+
+  useEffect(() => {
+    const el = bodyRef.current;
+    if (el) {
+      el.focus();
+      const end = el.value.length;
+      el.setSelectionRange(end, end);
+    }
+  }, []);
+
+  function insert(char) {
+    if (activeField === "title") setTitle((t) => t + char);
+    else setBody((b) => b + char);
+    setShift(false);
+  }
+  function backspace() {
+    if (activeField === "title") setTitle((t) => t.slice(0, -1));
+    else setBody((b) => b.slice(0, -1));
+  }
+  function space() {
+    insert(" ");
+  }
+  function returnKey() {
+    if (activeField === "title") titleRef.current?.blur();
+    else setBody((b) => b + "\n");
+  }
+
+  return (
+    <div className="relative flex h-full flex-col">
+      <StatusBar />
+      <div className="flex items-center justify-between px-3 pb-2 pt-3">
+        <GlassIconButton onClick={onCancel} label="戻る">
+          <ChevronLeft size={20} />
+        </GlassIconButton>
+        <GlassIconButton onClick={() => onSave({ ...idea, title, body })} label="保存" tone="solid">
+          <Check size={19} strokeWidth={2.5} />
+        </GlassIconButton>
+      </div>
+
+      <div
+        style={{
+          width: 334,
+          height: 717,
+          borderRadius: 20,
+          overflow: "hidden",
+          backgroundColor: "rgba(255,255,255,0.10)",
+          border: "1px solid rgba(255,255,255,0.40)",
+          boxShadow: "inset 2px 1px 6px 0 rgba(255,255,255,0.4)",
+          display: "flex",
+          flexDirection: "column",
+        }}
+        className="mx-auto mt-2 p-5 text-[#18414D] backdrop-blur-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div style={{ flex: "0 0 auto", position: "relative" }} className="mb-3">
+          <input
+            ref={titleRef}
+            value={title}
+            onFocus={() => {
+              setActiveField("title");
+              setKeyboardOpen(true);
+            }}
+            onBlur={() => setKeyboardOpen(false)}
+            onChange={(e) => setTitle(e.target.value)}
+            className="w-full bg-transparent text-center text-[28px] font-bold text-[#18414D] focus:outline-none"
+          />
+          {!title && (
+            <span
+              className="pointer-events-none absolute inset-0 flex items-center justify-center text-[28px] font-bold text-white/55"
+              aria-hidden="true"
+            >
+              <span className="cursor-blink mr-1 inline-block h-[26px] w-[2px] bg-white/55" />
+              アイディア
+            </span>
+          )}
+        </div>
+        <div style={{ flex: "1 1 auto", position: "relative", minHeight: 0 }}>
+          <textarea
+            ref={bodyRef}
+            value={body}
+            onFocus={() => {
+              setActiveField("body");
+              setKeyboardOpen(true);
+            }}
+            onBlur={() => setKeyboardOpen(false)}
+            onChange={(e) => setBody(e.target.value)}
+            style={{ width: "100%", height: "100%", overflowY: "auto", paddingRight: 10 }}
+            className="icy-scroll resize-none bg-transparent text-[14.5px] leading-relaxed text-[#18414D] focus:outline-none"
+          />
+          {!body && (
+            <span
+              className="pointer-events-none absolute left-0 top-0 flex items-center text-[14.5px] leading-relaxed text-white/55"
+              aria-hidden="true"
+            >
+              <span className="cursor-blink mr-0.5 inline-block h-[16px] w-[1.5px] bg-white/55" />
+              詳細
+            </span>
+          )}
+        </div>
+      </div>
+
+      {keyboardOpen && (
+        <div className="absolute inset-x-0 bottom-0 keyboard-enter">
+          <Keyboard
+            onKey={insert}
+            onBackspace={backspace}
+            onSpace={space}
+            onReturn={returnKey}
+            shift={shift}
+            onToggleShift={() => setShift((s) => !s)}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SearchScreen({ ideas, onBack, onOpenIdea }) {
+  const [query, setQuery] = useState("");
+  const [shift, setShift] = useState(false);
+  const [keyboardOpen, setKeyboardOpen] = useState(true);
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
+
+  const results = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (q.length < 2) return [];
+    return ideas.filter((i) => i.title.toLowerCase().includes(q) || i.body.toLowerCase().includes(q));
+  }, [query, ideas]);
+
+  function insert(char) {
+    setQuery((q) => q + char);
+    setShift(false);
+  }
+
+  return (
+    <div className="relative flex h-full flex-col">
+      <StatusBar />
+      <div style={{ display: "flex", alignItems: "center", gap: 0, paddingLeft: 1, paddingRight: 1, paddingBottom: 12, paddingTop: 12 }}>
+        <GlassIconButton onClick={onBack} label="戻る">
+          <ChevronLeft size={20} />
+        </GlassIconButton>
+        <div
+          style={{
+            width: 347,
+            height: 84,
+            borderRadius: 24,
+            backgroundColor: "rgba(255,255,255,0.10)",
+            border: "1px solid rgba(255,255,255,0.40)",
+            boxShadow: "inset 2px 1px 6px 0 rgba(255,255,255,0.4)",
+          }}
+          className="flex items-center gap-2 px-5 text-[#19414C] backdrop-blur-xl"
+          onClick={(e) => {
+            e.stopPropagation();
+            inputRef.current?.focus();
+          }}
+        >
+          <Search size={17} className="shrink-0 text-[#19414C]/70" />
+          <input
+            ref={inputRef}
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onFocus={() => setKeyboardOpen(true)}
+            onBlur={() => setKeyboardOpen(false)}
+            placeholder="アイディアを検索"
+            className="search-ph w-full bg-transparent text-[16px] focus:outline-none"
+          />
+          {query && (
+            <button onMouseDown={(e) => e.preventDefault()} onClick={() => setQuery("")} aria-label="クリア">
+              <X size={15} className="text-[#19414C]/70" />
+            </button>
+          )}
+        </div>
+      </div>
+
+      <div className="flex-1 overflow-y-auto px-4 pb-2" style={{ paddingBottom: keyboardOpen ? 250 : 16 }}>
+        {query.trim().length < 2 ? (
+          <p className="mt-10 text-center text-[14.5px] text-[#19414C]/60">タイトルや本文のキーワードで探せます</p>
+        ) : results.length === 0 ? (
+          <p className="mt-10 text-center text-[14.5px] text-[#19414C]/60">見つかりませんでした</p>
+        ) : (
+          <div
+            style={{ display: "grid", gridTemplateColumns: "155px 155px", justifyContent: "center", columnGap: 24, rowGap: 20 }}
+            className="pt-1"
+          >
+            {results.map((idea) => (
+              <IdeaGlassCard key={idea.id} idea={idea} onOpen={() => onOpenIdea(idea.id)} />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {keyboardOpen && (
+        <div className="absolute inset-x-0 bottom-0 keyboard-enter">
+          <Keyboard
+            onKey={insert}
+            onBackspace={() => setQuery((q) => q.slice(0, -1))}
+            onSpace={() => insert(" ")}
+            onReturn={() => inputRef.current?.blur()}
+            shift={shift}
+            onToggleShift={() => setShift((s) => !s)}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---------------- app shell ----------------
+
+export default function IdeaAppPrototype() {
+  const [ideas, setIdeas] = useState(seedIdeas);
+  const [draftIdea, setDraftIdea] = useState(null);
+  const [view, setView] = useState("list"); // list | detail | edit | search
+  const [activeId, setActiveId] = useState(null);
+
+  const isDraftActive = draftIdea && draftIdea.id === activeId;
+  const activeIdea = isDraftActive ? draftIdea : ideas.find((i) => i.id === activeId) ?? null;
+
+  function openIdea(id) {
+    setActiveId(id);
+    setView("detail");
+  }
+  function saveIdea(updated) {
+    setIdeas((prev) => {
+      const exists = prev.some((i) => i.id === updated.id);
+      if (exists) return prev.map((i) => (i.id === updated.id ? { ...updated, updatedAt: "たった今" } : i));
+      return [{ ...updated, updatedAt: "たった今" }, ...prev];
+    });
+    setDraftIdea(null);
+    setView("list");
+  }
+  function newIdea() {
+    const id = "draft-" + Date.now();
+    const draft = { id, title: "", body: "", updatedAt: "たった今" };
+    setDraftIdea(draft);
+    setActiveId(id);
+    setView("edit");
+  }
+  function discardDraft() {
+    setDraftIdea(null);
+    setActiveId(null);
+    setView("list");
+  }
+  function deleteIdea(id) {
+    setIdeas((prev) => prev.filter((i) => i.id !== id));
+    setDraftIdea(null);
+    setView("list");
+  }
+
+  return (
+    <div className="relative flex min-h-screen w-full items-start justify-center overflow-y-auto bg-[#0b1f4d] p-6">
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&family=Noto+Sans+JP:wght@400;500;700&display=swap');
+        * { font-family: 'Zen Maru Gothic','Noto Sans JP',sans-serif; }
+        .line-clamp-2 { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+        .line-clamp-4 { display:-webkit-box; -webkit-line-clamp:4; -webkit-box-orient:vertical; overflow:hidden; }
+        .line-clamp-5 { display:-webkit-box; -webkit-line-clamp:5; -webkit-box-orient:vertical; overflow:hidden; }
+        @keyframes bgShift {
+          0%,100% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
+        }
+        @keyframes drift {
+          0% { transform: translate(0,0) rotate(0deg); }
+          50% { transform: translate(14px,-18px) rotate(8deg); }
+          100% { transform: translate(0,0) rotate(0deg); }
+        }
+        .bg-animated {
+          background: linear-gradient(120deg,#2E86E0,#45A5FA,#3B93EE,#6DBBFF);
+          background-size: 300% 300%;
+          animation: bgShift 14s ease-in-out infinite;
+        }
+        .orb { animation: drift 9s ease-in-out infinite; }
+        .screen-enter { animation: screenIn .32s cubic-bezier(.22,1,.36,1); }
+        @keyframes screenIn {
+          from { opacity:0; transform: scale(.97) translateY(10px); }
+          to { opacity:1; transform: scale(1) translateY(0); }
+        }
+        @keyframes blink { 0%,45% { opacity:1; } 46%,100% { opacity:0; } }
+        .cursor-blink { animation: blink 1s step-end infinite; }
+        .icy-scroll::-webkit-scrollbar { width: 5px; }
+        .icy-scroll::-webkit-scrollbar-track { background: transparent; }
+        .icy-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.45); border-radius: 999px; }
+        .icy-scroll { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.45) transparent; }
+        @keyframes keyboardIn {
+          from { transform: translateY(100%); }
+          to { transform: translateY(0); }
+        }
+        .keyboard-enter { animation: keyboardIn .28s cubic-bezier(.22,1,.36,1); }
+        .search-ph::placeholder { color: #D9F3FF; opacity: 1; }
+      `}</style>
+
+      {/* ambient background */}
+      <div className="bg-animated pointer-events-none absolute inset-0" />
+      <div className="orb pointer-events-none absolute left-[8%] top-[15%] h-40 w-40 rounded-full bg-white/10 blur-3xl" />
+      <div className="orb pointer-events-none absolute bottom-[12%] right-[10%] h-56 w-56 rounded-full bg-white/10 blur-3xl" style={{ animationDelay: "-4s" }} />
+
+      {/* phone frame — bezel is sized so the INNER content area is exactly 393x852pt (true iPhone 16 size); the 6px border is extra, outside that budget */}
+      <div className="relative shrink-0">
+        <div
+          style={{ width: 393 + 12, height: 852 + 12 }}
+          className="relative overflow-hidden rounded-[54px] border-[6px] border-[#0d1b3d]/80 bg-[#0d1b3d] shadow-[0_30px_80px_rgba(0,0,0,0.55)]"
+        >
+          <div className="absolute left-1/2 top-0 z-30 h-7 w-40 -translate-x-1/2 rounded-b-2xl bg-[#0d1b3d]" />
+          <div className="bg-animated absolute inset-0 rounded-[46px]" />
+          <div
+            className="relative z-10 h-full w-full"
+            key={view}
+            onClick={(e) => {
+              const target = e.target;
+              if (target.closest && target.closest("input, textarea, button")) return;
+              if (document.activeElement && document.activeElement !== document.body) {
+                document.activeElement.blur();
+              }
+            }}
+          >
+            <div className="screen-enter h-full">
+              {view === "list" && (
+                <ListScreen ideas={ideas} onOpenIdea={openIdea} onNewIdea={newIdea} onGoSearch={() => setView("search")} />
+              )}
+              {view === "detail" && activeIdea && (
+                <DetailScreen
+                  idea={activeIdea}
+                  onBack={() => (isDraftActive ? discardDraft() : setView("list"))}
+                  onEdit={() => setView("edit")}
+                  onDelete={() => deleteIdea(activeIdea.id)}
+                />
+              )}
+              {view === "edit" && activeIdea && (
+                <EditScreen
+                  idea={activeIdea}
+                  onCancel={() => (isDraftActive ? discardDraft() : setView("detail"))}
+                  onSave={saveIdea}
+                />
+              )}
+              {view === "search" && <SearchScreen ideas={ideas} onBack={() => setView("list")} onOpenIdea={openIdea} />}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
