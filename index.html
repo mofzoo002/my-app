@@ -306,15 +306,19 @@ function EditScreen({ idea, isNew, onCancel, onSave }) {
   useLayoutEffect(() => {
     const el = titleRef.current;
     if (!el) return;
-    el.focus();
-    el.setSelectionRange(0, 0);
-    if (document.activeElement !== el || el.selectionStart !== 0) {
-      const val = el.value;
-      el.value = "";
-      el.value = val;
+    if (isNew) {
+      el.focus();
+      el.style.textAlign = 'left';
       el.setSelectionRange(0, 0);
+      requestAnimationFrame(() => {
+        el.style.textAlign = 'center';
+      });
+    } else {
+      el.focus();
+      const len = el.value.length;
+      el.setSelectionRange(len, len);
     }
-  }, []);
+  }, [isNew]);
 
   return (
     <div className="relative flex min-h-screen w-full flex-col">
