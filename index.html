@@ -2,8 +2,8 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>創作ネタ app — prototype</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>創作ネタ app</title>
 
 <!-- Tailwind CSS (CDN / JIT, watches the DOM for class names) -->
 <script src="https://cdn.tailwindcss.com"></script>
@@ -25,6 +25,7 @@
 
 <style>
   html, body, #root { height: 100%; margin: 0; }
+  body { overflow-x: hidden; }
 </style>
 </head>
 <body>
@@ -33,30 +34,18 @@
 <script type="text/babel" data-type="module" data-presets="react">
 import React, { useState, useRef, useEffect, useMemo } from "react";
 import ReactDOM from "react-dom/client";
-import {
-  Search,
-  Plus,
-  ChevronLeft,
-  Pencil,
-  Check,
-  Signal,
-  Wifi,
-  BatteryFull,
-  Delete,
-  ArrowUp,
-  Globe,
-  Mic,
-  X,
-  Trash2,
-} from "lucide-react";
+import { Search, Plus, ChevronLeft, Pencil, Check, X, Trash2 } from "lucide-react";
 
 /**
- * 創作ネタ app — clickable prototype
- * Screens: list (1/5) -> detail (2) -> edit (3), plus search (4)
- * Wired to match the Figma prototype connections described by the user.
+ * 創作ネタ app
+ * Full-viewport mobile web app (no mocked phone frame / status bar).
+ * Text entry relies entirely on the device's real keyboard (no on-screen
+ * keyboard UI). All idea/project data persists to localStorage.
  */
 
-// ---------------- seed data ----------------
+// ---------------- persistence ----------------
+const STORAGE_KEY = "sousaku-neta-app-v1";
+
 const seedIdeas = [
   { id: "i1", title: "アイディア", body: "詳細\nあ\nい\nう\nえ\nお", updatedAt: "7月10日" },
   {
@@ -70,20 +59,19 @@ const seedIdeas = [
   { id: "i4", title: "オチのアイディア", body: "", updatedAt: "7月14日" },
 ];
 
-// ---------------- small pieces ----------------
-
-function StatusBar() {
-  return (
-    <div className="flex items-center justify-between px-7 pt-3 pb-1 text-[#19414C] select-none">
-      <span className="text-[15px] font-semibold tracking-tight">9:41</span>
-      <div className="flex items-center gap-1.5">
-        <Signal size={14} strokeWidth={2.5} />
-        <Wifi size={14} strokeWidth={2.5} />
-        <BatteryFull size={16} strokeWidth={2} />
-      </div>
-    </div>
-  );
+function loadPersisted() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || !Array.isArray(parsed.ideas)) return null;
+    return parsed;
+  } catch (e) {
+    return null;
+  }
 }
+
+// ---------------- small pieces ----------------
 
 function GlassIconButton({ children, onClick, label, tone = "light", size = 44 }) {
   return (
@@ -113,72 +101,6 @@ function GlassIconButton({ children, onClick, label, tone = "light", size = 44 }
   );
 }
 
-// iOS-style on-screen keyboard. Purely visual + functional English layout,
-// matching the reference screenshots.
-function Keyboard({ onKey, onBackspace, onSpace, onReturn, shift, onToggleShift }) {
-  const rows = [
-    ["q", "w", "e", "r", "t", "y", "u", "i", "o", "p"],
-    ["a", "s", "d", "f", "g", "h", "j", "k", "l"],
-    ["z", "x", "c", "v", "b", "n", "m"],
-  ];
-
-  const keyBase =
-    "flex items-center justify-center rounded-[9px] bg-white/90 text-[#1c2b4a] shadow-[0_1px_0_rgba(0,0,0,0.15)] transition active:scale-95 active:bg-white/60";
-  const keepFocus = (e) => e.preventDefault();
-
-  return (
-    <div className="w-full rounded-t-2xl border-t border-white/25 bg-[#274b9e]/70 px-1.5 pb-5 pt-2 backdrop-blur-xl">
-      <div className="mb-1.5 flex justify-center gap-1.5">
-        {rows[0].map((k) => (
-          <button key={k} onMouseDown={keepFocus} onClick={() => onKey(shift ? k.toUpperCase() : k)} className={keyBase + " h-10 flex-1 text-[15px] font-medium"}>
-            {shift ? k.toUpperCase() : k}
-          </button>
-        ))}
-      </div>
-      <div className="mb-1.5 flex justify-center gap-1.5 px-3">
-        {rows[1].map((k) => (
-          <button key={k} onMouseDown={keepFocus} onClick={() => onKey(shift ? k.toUpperCase() : k)} className={keyBase + " h-10 flex-1 text-[15px] font-medium"}>
-            {shift ? k.toUpperCase() : k}
-          </button>
-        ))}
-      </div>
-      <div className="mb-1.5 flex justify-center gap-1.5">
-        <button
-          onMouseDown={keepFocus}
-          onClick={onToggleShift}
-          className={keyBase + " h-10 w-10 " + (shift ? "bg-white text-[#19414C]" : "bg-white/60")}
-          aria-label="シフト"
-        >
-          <ArrowUp size={16} strokeWidth={2.5} />
-        </button>
-        {rows[2].map((k) => (
-          <button key={k} onMouseDown={keepFocus} onClick={() => onKey(shift ? k.toUpperCase() : k)} className={keyBase + " h-10 flex-1 text-[15px] font-medium"}>
-            {shift ? k.toUpperCase() : k}
-          </button>
-        ))}
-        <button onMouseDown={keepFocus} onClick={onBackspace} className={keyBase + " h-10 w-10 bg-white/60"} aria-label="削除">
-          <Delete size={16} strokeWidth={2.5} />
-        </button>
-      </div>
-      <div className="flex justify-center gap-1.5">
-        <button onMouseDown={keepFocus} className={keyBase + " h-10 w-12 text-[13px] font-medium bg-white/60"}>123</button>
-        <button onMouseDown={keepFocus} className={keyBase + " h-10 w-11 bg-white/60"}>
-          <Globe size={15} />
-        </button>
-        <button onMouseDown={keepFocus} onClick={onSpace} className={keyBase + " h-10 flex-1 text-[13px]"}>
-          space
-        </button>
-        <button onMouseDown={keepFocus} onClick={onReturn} className={keyBase + " h-10 w-16 text-[13px] font-medium bg-white/60"}>
-          return
-        </button>
-        <button onMouseDown={keepFocus} className={keyBase + " h-10 w-11 bg-white/60"}>
-          <Mic size={15} />
-        </button>
-      </div>
-    </div>
-  );
-}
-
 function IdeaGlassCard({ idea, onOpen }) {
   const preview = idea.body.split("\n").find((l) => l.trim()) || "詳細";
   return (
@@ -204,11 +126,9 @@ function IdeaGlassCard({ idea, onOpen }) {
 
 // ---------------- screens ----------------
 
-function ListScreen({ ideas, onOpenIdea, onNewIdea, onGoSearch }) {
-  const [projectName, setProjectName] = useState("プロジェクト");
+function ListScreen({ ideas, projectName, onProjectNameChange, onOpenIdea, onNewIdea, onGoSearch }) {
   const [draftName, setDraftName] = useState(projectName);
   const [editingProject, setEditingProject] = useState(false);
-  const [shift, setShift] = useState(false);
   const inputRef = useRef(null);
 
   useEffect(() => {
@@ -220,19 +140,25 @@ function ListScreen({ ideas, onOpenIdea, onNewIdea, onGoSearch }) {
     }
   }, [editingProject]);
 
-  function insert(char) {
-    setDraftName((d) => d + char);
-    setShift(false);
-  }
   function finishEditing() {
-    setProjectName(draftName.trim() || "プロジェクト");
+    onProjectNameChange(draftName.trim() || "プロジェクト");
     setEditingProject(false);
   }
 
   return (
-    <div className="relative flex h-full flex-col">
-      <StatusBar />
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 3, paddingLeft: 2, paddingRight: 2, paddingBottom: 16, paddingTop: 12 }}>
+    <div className="relative flex min-h-screen w-full flex-col">
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 3,
+          paddingLeft: 2,
+          paddingRight: 2,
+          paddingBottom: 16,
+          paddingTop: "calc(env(safe-area-inset-top, 0px) + 16px)",
+        }}
+      >
         <GlassIconButton onClick={onGoSearch} label="検索" size={56}>
           <Search size={20} />
         </GlassIconButton>
@@ -279,7 +205,7 @@ function ListScreen({ ideas, onOpenIdea, onNewIdea, onGoSearch }) {
         </GlassIconButton>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-4 pb-4 pt-2" style={{ paddingBottom: editingProject ? 250 : 16 }}>
+      <div className="flex-1 px-4 pb-10 pt-2">
         <div
           style={{ display: "grid", gridTemplateColumns: "155px 155px", justifyContent: "center", columnGap: 24, rowGap: 20 }}
         >
@@ -288,19 +214,6 @@ function ListScreen({ ideas, onOpenIdea, onNewIdea, onGoSearch }) {
           ))}
         </div>
       </div>
-
-      {editingProject && (
-        <div className="absolute inset-x-0 bottom-0 keyboard-enter">
-          <Keyboard
-            onKey={insert}
-            onBackspace={() => setDraftName((d) => d.slice(0, -1))}
-            onSpace={() => insert(" ")}
-            onReturn={finishEditing}
-            shift={shift}
-            onToggleShift={() => setShift((s) => !s)}
-          />
-        </div>
-      )}
     </div>
   );
 }
@@ -309,9 +222,11 @@ function DetailScreen({ idea, onBack, onEdit, onDelete }) {
   const [confirming, setConfirming] = useState(false);
 
   return (
-    <div className="flex h-full flex-col">
-      <StatusBar />
-      <div className="flex items-center justify-between px-3 pb-2 pt-3">
+    <div className="flex min-h-screen w-full flex-col">
+      <div
+        className="flex items-center justify-between px-3 pb-2"
+        style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 12px)" }}
+      >
         <GlassIconButton onClick={onBack} label="戻る">
           <ChevronLeft size={20} />
         </GlassIconButton>
@@ -374,6 +289,7 @@ function DetailScreen({ idea, onBack, onEdit, onDelete }) {
           )}
         </div>
       </div>
+      <div style={{ height: "calc(env(safe-area-inset-bottom, 0px) + 24px)" }} />
     </div>
   );
 }
@@ -381,9 +297,6 @@ function DetailScreen({ idea, onBack, onEdit, onDelete }) {
 function EditScreen({ idea, onCancel, onSave }) {
   const [title, setTitle] = useState(idea.title);
   const [body, setBody] = useState(idea.body);
-  const [activeField, setActiveField] = useState("body");
-  const [shift, setShift] = useState(false);
-  const [keyboardOpen, setKeyboardOpen] = useState(true);
   const titleRef = useRef(null);
   const bodyRef = useRef(null);
 
@@ -396,27 +309,12 @@ function EditScreen({ idea, onCancel, onSave }) {
     }
   }, []);
 
-  function insert(char) {
-    if (activeField === "title") setTitle((t) => t + char);
-    else setBody((b) => b + char);
-    setShift(false);
-  }
-  function backspace() {
-    if (activeField === "title") setTitle((t) => t.slice(0, -1));
-    else setBody((b) => b.slice(0, -1));
-  }
-  function space() {
-    insert(" ");
-  }
-  function returnKey() {
-    if (activeField === "title") titleRef.current?.blur();
-    else setBody((b) => b + "\n");
-  }
-
   return (
-    <div className="relative flex h-full flex-col">
-      <StatusBar />
-      <div className="flex items-center justify-between px-3 pb-2 pt-3">
+    <div className="relative flex min-h-screen w-full flex-col">
+      <div
+        className="flex items-center justify-between px-3 pb-2"
+        style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 12px)" }}
+      >
         <GlassIconButton onClick={onCancel} label="戻る">
           <ChevronLeft size={20} />
         </GlassIconButton>
@@ -438,17 +336,11 @@ function EditScreen({ idea, onCancel, onSave }) {
           flexDirection: "column",
         }}
         className="mx-auto mt-2 p-5 text-[#18414D] backdrop-blur-xl"
-        onClick={(e) => e.stopPropagation()}
       >
         <div style={{ flex: "0 0 auto", position: "relative" }} className="mb-3">
           <input
             ref={titleRef}
             value={title}
-            onFocus={() => {
-              setActiveField("title");
-              setKeyboardOpen(true);
-            }}
-            onBlur={() => setKeyboardOpen(false)}
             onChange={(e) => setTitle(e.target.value)}
             className="w-full bg-transparent text-center text-[28px] font-bold text-[#18414D] focus:outline-none"
           />
@@ -466,11 +358,6 @@ function EditScreen({ idea, onCancel, onSave }) {
           <textarea
             ref={bodyRef}
             value={body}
-            onFocus={() => {
-              setActiveField("body");
-              setKeyboardOpen(true);
-            }}
-            onBlur={() => setKeyboardOpen(false)}
             onChange={(e) => setBody(e.target.value)}
             style={{ width: "100%", height: "100%", overflowY: "auto", paddingRight: 10 }}
             className="icy-scroll resize-none bg-transparent text-[14.5px] leading-relaxed text-[#18414D] focus:outline-none"
@@ -486,27 +373,13 @@ function EditScreen({ idea, onCancel, onSave }) {
           )}
         </div>
       </div>
-
-      {keyboardOpen && (
-        <div className="absolute inset-x-0 bottom-0 keyboard-enter">
-          <Keyboard
-            onKey={insert}
-            onBackspace={backspace}
-            onSpace={space}
-            onReturn={returnKey}
-            shift={shift}
-            onToggleShift={() => setShift((s) => !s)}
-          />
-        </div>
-      )}
+      <div style={{ height: "calc(env(safe-area-inset-bottom, 0px) + 24px)" }} />
     </div>
   );
 }
 
 function SearchScreen({ ideas, onBack, onOpenIdea }) {
   const [query, setQuery] = useState("");
-  const [shift, setShift] = useState(false);
-  const [keyboardOpen, setKeyboardOpen] = useState(true);
   const inputRef = useRef(null);
 
   useEffect(() => {
@@ -519,15 +392,19 @@ function SearchScreen({ ideas, onBack, onOpenIdea }) {
     return ideas.filter((i) => i.title.toLowerCase().includes(q) || i.body.toLowerCase().includes(q));
   }, [query, ideas]);
 
-  function insert(char) {
-    setQuery((q) => q + char);
-    setShift(false);
-  }
-
   return (
-    <div className="relative flex h-full flex-col">
-      <StatusBar />
-      <div style={{ display: "flex", alignItems: "center", gap: 0, paddingLeft: 1, paddingRight: 1, paddingBottom: 12, paddingTop: 12 }}>
+    <div className="relative flex min-h-screen w-full flex-col">
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 0,
+          paddingLeft: 1,
+          paddingRight: 1,
+          paddingBottom: 12,
+          paddingTop: "calc(env(safe-area-inset-top, 0px) + 12px)",
+        }}
+      >
         <GlassIconButton onClick={onBack} label="戻る">
           <ChevronLeft size={20} />
         </GlassIconButton>
@@ -551,20 +428,18 @@ function SearchScreen({ ideas, onBack, onOpenIdea }) {
             ref={inputRef}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            onFocus={() => setKeyboardOpen(true)}
-            onBlur={() => setKeyboardOpen(false)}
             placeholder="アイディアを検索"
             className="search-ph w-full bg-transparent text-[16px] focus:outline-none"
           />
           {query && (
-            <button onMouseDown={(e) => e.preventDefault()} onClick={() => setQuery("")} aria-label="クリア">
+            <button onClick={() => setQuery("")} aria-label="クリア">
               <X size={15} className="text-[#19414C]/70" />
             </button>
           )}
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-4 pb-2" style={{ paddingBottom: keyboardOpen ? 250 : 16 }}>
+      <div className="flex-1 px-4 pb-10">
         {query.trim().length < 2 ? (
           <p className="mt-10 text-center text-[14.5px] text-[#19414C]/60">タイトルや本文のキーワードで探せます</p>
         ) : results.length === 0 ? (
@@ -580,19 +455,6 @@ function SearchScreen({ ideas, onBack, onOpenIdea }) {
           </div>
         )}
       </div>
-
-      {keyboardOpen && (
-        <div className="absolute inset-x-0 bottom-0 keyboard-enter">
-          <Keyboard
-            onKey={insert}
-            onBackspace={() => setQuery((q) => q.slice(0, -1))}
-            onSpace={() => insert(" ")}
-            onReturn={() => inputRef.current?.blur()}
-            shift={shift}
-            onToggleShift={() => setShift((s) => !s)}
-          />
-        </div>
-      )}
     </div>
   );
 }
@@ -600,10 +462,21 @@ function SearchScreen({ ideas, onBack, onOpenIdea }) {
 // ---------------- app shell ----------------
 
 function IdeaAppPrototype() {
-  const [ideas, setIdeas] = useState(seedIdeas);
+  const persisted = useMemo(() => loadPersisted(), []);
+  const [ideas, setIdeas] = useState(persisted?.ideas ?? seedIdeas);
+  const [projectName, setProjectName] = useState(persisted?.projectName ?? "プロジェクト");
   const [draftIdea, setDraftIdea] = useState(null);
   const [view, setView] = useState("list"); // list | detail | edit | search
   const [activeId, setActiveId] = useState(null);
+
+  // persist ideas + project name to localStorage whenever they change
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ ideas, projectName }));
+    } catch (e) {
+      // storage unavailable (private mode, quota, etc.) — fail silently
+    }
+  }, [ideas, projectName]);
 
   const isDraftActive = draftIdea && draftIdea.id === activeId;
   const activeIdea = isDraftActive ? draftIdea : ideas.find((i) => i.id === activeId) ?? null;
@@ -640,7 +513,7 @@ function IdeaAppPrototype() {
   }
 
   return (
-    <div className="relative flex min-h-screen w-full items-start justify-center overflow-y-auto bg-[#0b1f4d] p-6">
+    <div className="bg-animated relative min-h-screen w-full">
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&family=Noto+Sans+JP:wght@400;500;700&display=swap');
         * { font-family: 'Zen Maru Gothic','Noto Sans JP',sans-serif; }
@@ -673,60 +546,51 @@ function IdeaAppPrototype() {
         .icy-scroll::-webkit-scrollbar-track { background: transparent; }
         .icy-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.45); border-radius: 999px; }
         .icy-scroll { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.45) transparent; }
-        @keyframes keyboardIn {
-          from { transform: translateY(100%); }
-          to { transform: translateY(0); }
-        }
-        .keyboard-enter { animation: keyboardIn .28s cubic-bezier(.22,1,.36,1); }
         .search-ph::placeholder { color: #D9F3FF; opacity: 1; }
       `}</style>
 
-      {/* ambient background */}
-      <div className="bg-animated pointer-events-none absolute inset-0" />
+      {/* ambient decoration */}
       <div className="orb pointer-events-none absolute left-[8%] top-[15%] h-40 w-40 rounded-full bg-white/10 blur-3xl" />
       <div className="orb pointer-events-none absolute bottom-[12%] right-[10%] h-56 w-56 rounded-full bg-white/10 blur-3xl" style={{ animationDelay: "-4s" }} />
 
-      {/* phone frame — bezel is sized so the INNER content area is exactly 393x852pt (true iPhone 16 size); the 6px border is extra, outside that budget */}
-      <div className="relative shrink-0">
-        <div
-          style={{ width: 393 + 12, height: 852 + 12 }}
-          className="relative overflow-hidden rounded-[54px] border-[6px] border-[#0d1b3d]/80 bg-[#0d1b3d] shadow-[0_30px_80px_rgba(0,0,0,0.55)]"
-        >
-          <div className="absolute left-1/2 top-0 z-30 h-7 w-40 -translate-x-1/2 rounded-b-2xl bg-[#0d1b3d]" />
-          <div className="bg-animated absolute inset-0 rounded-[46px]" />
-          <div
-            className="relative z-10 h-full w-full"
-            key={view}
-            onClick={(e) => {
-              const target = e.target;
-              if (target.closest && target.closest("input, textarea, button")) return;
-              if (document.activeElement && document.activeElement !== document.body) {
-                document.activeElement.blur();
-              }
-            }}
-          >
-            <div className="screen-enter h-full">
-              {view === "list" && (
-                <ListScreen ideas={ideas} onOpenIdea={openIdea} onNewIdea={newIdea} onGoSearch={() => setView("search")} />
-              )}
-              {view === "detail" && activeIdea && (
-                <DetailScreen
-                  idea={activeIdea}
-                  onBack={() => (isDraftActive ? discardDraft() : setView("list"))}
-                  onEdit={() => setView("edit")}
-                  onDelete={() => deleteIdea(activeIdea.id)}
-                />
-              )}
-              {view === "edit" && activeIdea && (
-                <EditScreen
-                  idea={activeIdea}
-                  onCancel={() => (isDraftActive ? discardDraft() : setView("detail"))}
-                  onSave={saveIdea}
-                />
-              )}
-              {view === "search" && <SearchScreen ideas={ideas} onBack={() => setView("list")} onOpenIdea={openIdea} />}
-            </div>
-          </div>
+      <div
+        className="relative z-10"
+        key={view}
+        onClick={(e) => {
+          const target = e.target;
+          if (target.closest && target.closest("input, textarea, button")) return;
+          if (document.activeElement && document.activeElement !== document.body) {
+            document.activeElement.blur();
+          }
+        }}
+      >
+        <div className="screen-enter">
+          {view === "list" && (
+            <ListScreen
+              ideas={ideas}
+              projectName={projectName}
+              onProjectNameChange={setProjectName}
+              onOpenIdea={openIdea}
+              onNewIdea={newIdea}
+              onGoSearch={() => setView("search")}
+            />
+          )}
+          {view === "detail" && activeIdea && (
+            <DetailScreen
+              idea={activeIdea}
+              onBack={() => (isDraftActive ? discardDraft() : setView("list"))}
+              onEdit={() => setView("edit")}
+              onDelete={() => deleteIdea(activeIdea.id)}
+            />
+          )}
+          {view === "edit" && activeIdea && (
+            <EditScreen
+              idea={activeIdea}
+              onCancel={() => (isDraftActive ? discardDraft() : setView("detail"))}
+              onSave={saveIdea}
+            />
+          )}
+          {view === "search" && <SearchScreen ideas={ideas} onBack={() => setView("list")} onOpenIdea={openIdea} />}
         </div>
       </div>
     </div>
