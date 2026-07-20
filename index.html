@@ -34,7 +34,7 @@
 <div id="root"></div>
 
 <script type="text/babel" data-type="module" data-presets="react">
-import React, { useState, useRef, useEffect, useMemo } from "react";
+import React, { useState, useRef, useEffect, useLayoutEffect, useMemo } from "react";
 import ReactDOM from "react-dom/client";
 import { Search, Plus, ChevronLeft, Pencil, Check, X, Trash2 } from "lucide-react";
 
@@ -303,18 +303,18 @@ function EditScreen({ idea, isNew, onCancel, onSave }) {
   const [body, setBody] = useState(idea.body);
   const titleRef = useRef(null);
 
-  useEffect(() => {
-    if (isNew && titleRef.current) {
-      const el = titleRef.current;
-      el.style.textAlign = "left";
-      el.focus();
-      setTimeout(() => {
-        el.selectionStart = 0;
-        el.selectionEnd = 0;
-        el.style.textAlign = "center";
-      }, 10);
+  useLayoutEffect(() => {
+    const el = titleRef.current;
+    if (!el) return;
+    el.focus();
+    el.setSelectionRange(0, 0);
+    if (document.activeElement !== el || el.selectionStart !== 0) {
+      const val = el.value;
+      el.value = "";
+      el.value = val;
+      el.setSelectionRange(0, 0);
     }
-  }, [isNew]);
+  }, []);
 
   return (
     <div className="relative flex min-h-screen w-full flex-col">
