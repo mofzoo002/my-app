@@ -1,10 +1,27 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-     <link rel="apple-touch-icon" href="icon.png">
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
 <title>創作ネタ app</title>
+
+<!-- PWA / "add to home screen" support -->
+<link rel="manifest" href="manifest.json" />
+<link rel="apple-touch-icon" href="icon-180.png?v=1" />
+<link rel="icon" type="image/png" sizes="512x512" href="icon-512.png?v=1" />
+<meta name="theme-color" content="#45A5FA" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="ネタ帳" />
+<!--
+  Cache note: the "?v=1" query on the icon links is a cache-buster for browsers
+  in general, but iOS Safari specifically caches the apple-touch-icon by
+  FILENAME and largely ignores query strings for it. If you update icon-180.png
+  later and iOS still shows the old icon after "追加" from the home screen,
+  rename the file itself (e.g. icon-180-v2.png) and update the href here —
+  that's the only fully reliable way to bust the icon cache on iOS.
+-->
 
 <!-- Tailwind CSS (CDN / JIT, watches the DOM for class names) -->
 <script src="https://cdn.tailwindcss.com"></script>
@@ -153,14 +170,14 @@ function ListScreen({ ideas, projectName, onProjectNameChange, onOpenIdea, onNew
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          gap: 3,
-          paddingLeft: 2,
-          paddingRight: 2,
+          gap: 12,
+          paddingLeft: 20,
+          paddingRight: 20,
           paddingBottom: 16,
           paddingTop: "calc(env(safe-area-inset-top, 0px) + 16px)",
         }}
       >
-        <GlassIconButton onClick={onGoSearch} label="検索" size={56}>
+        <GlassIconButton onClick={onGoSearch} label="検索" size={52}>
           <Search size={20} />
         </GlassIconButton>
 
@@ -173,7 +190,9 @@ function ListScreen({ ideas, projectName, onProjectNameChange, onOpenIdea, onNew
             setEditingProject(true);
           }}
           style={{
-            width: 271,
+            flex: "1 1 auto",
+            minWidth: 0,
+            maxWidth: 271,
             height: 67,
             borderRadius: 60,
             backgroundColor: "rgba(255,255,255,0.10)",
@@ -201,7 +220,7 @@ function ListScreen({ ideas, projectName, onProjectNameChange, onOpenIdea, onNew
           )}
         </div>
 
-        <GlassIconButton onClick={onNewIdea} label="新規追加" tone="solid" size={56}>
+        <GlassIconButton onClick={onNewIdea} label="新規追加" tone="solid" size={52}>
           <Plus size={22} strokeWidth={2.5} />
         </GlassIconButton>
       </div>
@@ -295,20 +314,20 @@ function DetailScreen({ idea, onBack, onEdit, onDelete }) {
   );
 }
 
-function EditScreen({ idea, onCancel, onSave }) {
+function EditScreen({ idea, isNew, onCancel, onSave }) {
   const [title, setTitle] = useState(idea.title);
   const [body, setBody] = useState(idea.body);
   const titleRef = useRef(null);
   const bodyRef = useRef(null);
 
   useEffect(() => {
-    const el = bodyRef.current;
-    if (el) {
-      el.focus();
-      const end = el.value.length;
-      el.setSelectionRange(end, end);
+    const target = isNew ? titleRef.current : bodyRef.current;
+    if (target) {
+      target.focus();
+      const end = target.value.length;
+      target.setSelectionRange(end, end);
     }
-  }, []);
+  }, [isNew]);
 
   return (
     <div className="relative flex min-h-screen w-full flex-col">
@@ -399,9 +418,9 @@ function SearchScreen({ ideas, onBack, onOpenIdea }) {
         style={{
           display: "flex",
           alignItems: "center",
-          gap: 0,
-          paddingLeft: 1,
-          paddingRight: 1,
+          gap: 10,
+          paddingLeft: 16,
+          paddingRight: 16,
           paddingBottom: 12,
           paddingTop: "calc(env(safe-area-inset-top, 0px) + 12px)",
         }}
@@ -411,7 +430,9 @@ function SearchScreen({ ideas, onBack, onOpenIdea }) {
         </GlassIconButton>
         <div
           style={{
-            width: 347,
+            flex: "1 1 auto",
+            minWidth: 0,
+            maxWidth: 347,
             height: 84,
             borderRadius: 24,
             backgroundColor: "rgba(255,255,255,0.10)",
@@ -587,6 +608,7 @@ function IdeaAppPrototype() {
           {view === "edit" && activeIdea && (
             <EditScreen
               idea={activeIdea}
+              isNew={isDraftActive}
               onCancel={() => (isDraftActive ? discardDraft() : setView("detail"))}
               onSave={saveIdea}
             />
