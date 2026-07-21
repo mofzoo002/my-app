@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<!-- Dynamic Island やステータスバー裏の背景色をアプリ色に合わせる設定 -->
+<meta name="theme-color" content="#2E86E0" />
+
 <title>my-app</title>
 
 <link rel="apple-touch-icon" href="icon.png">
@@ -26,7 +29,7 @@
 
 <style>
   html, body, #root { height: 100%; margin: 0; }
-  body { overflow-x: hidden; }
+  body { overflow-x: hidden; background-color: #2E86E0; }
 </style>
 </head>
 <body>
@@ -245,7 +248,6 @@ function DetailScreen({ idea, onBack, onEdit, onDelete }) {
           }}
           className="icy-scroll flex flex-col p-5 pb-16 text-left text-[#19414C] backdrop-blur-xl"
         >
-          {/* ★閲覧画面のタイトルを text-left (左揃え) に修正 */}
           <h1 className="mb-3 text-left text-[28px] font-bold">{idea.title || "アイディア"}</h1>
           <p className="flex-1 whitespace-pre-wrap text-[14.5px] leading-relaxed text-[#19414C]/85">
             {idea.body || "詳細"}
@@ -336,7 +338,6 @@ function EditScreen({ idea, isNew, onCancel, onSave }) {
         }}
         className="mx-auto mt-2 p-5 text-[#18414D] backdrop-blur-xl"
       >
-        {/* ★編集画面のタイトルを常に text-left (左揃え) に固定し、onBlur等での中央戻しを削除 */}
         <input
           ref={titleRef}
           value={title}
