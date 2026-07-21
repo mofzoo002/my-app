@@ -10,8 +10,7 @@
 <!-- Tailwind CSS (CDN / JIT, watches the DOM for class names) -->
 <script src="https://cdn.tailwindcss.com"></script>
 
-<!-- Babel (in-browser JSX transform only; ES module import/export is left untouched
-     and resolved natively by the browser via the import map below) -->
+<!-- Babel -->
 <script src="https://unpkg.com/@babel/standalone@7.24.7/babel.min.js"></script>
 
 <!-- Import map: bare specifiers -> ESM CDN builds -->
@@ -37,13 +36,6 @@
 import React, { useState, useRef, useEffect, useLayoutEffect, useMemo } from "react";
 import ReactDOM from "react-dom/client";
 import { Search, Plus, ChevronLeft, Pencil, Check, X, Trash2 } from "lucide-react";
-
-/**
- * 創作ネタ app
- * Full-viewport mobile web app (no mocked phone frame / status bar).
- * Text entry relies entirely on the device's real keyboard (no on-screen
- * keyboard UI). All idea/project data persists to localStorage.
- */
 
 // ---------------- persistence ----------------
 const STORAGE_KEY = "sousaku-neta-app-v1";
@@ -253,7 +245,8 @@ function DetailScreen({ idea, onBack, onEdit, onDelete }) {
           }}
           className="icy-scroll flex flex-col p-5 pb-16 text-left text-[#19414C] backdrop-blur-xl"
         >
-          <h1 className="mb-3 text-center text-[28px] font-bold">{idea.title || "アイディア"}</h1>
+          {/* ★閲覧画面のタイトルを text-left (左揃え) に修正 */}
+          <h1 className="mb-3 text-left text-[28px] font-bold">{idea.title || "アイディア"}</h1>
           <p className="flex-1 whitespace-pre-wrap text-[14.5px] leading-relaxed text-[#19414C]/85">
             {idea.body || "詳細"}
           </p>
@@ -306,7 +299,6 @@ function EditScreen({ idea, isNew, onCancel, onSave }) {
   useLayoutEffect(() => {
     const el = titleRef.current;
     if (!el) return;
-    el.style.textAlign = 'left';
     el.focus();
     if (isNew) {
       el.setSelectionRange(0, 0);
@@ -344,15 +336,14 @@ function EditScreen({ idea, isNew, onCancel, onSave }) {
         }}
         className="mx-auto mt-2 p-5 text-[#18414D] backdrop-blur-xl"
       >
+        {/* ★編集画面のタイトルを常に text-left (左揃え) に固定し、onBlur等での中央戻しを削除 */}
         <input
           ref={titleRef}
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          onFocus={(e) => { e.target.style.textAlign = 'left'; }}
-          onBlur={(e) => { e.target.style.textAlign = 'center'; }}
           placeholder="アイディア"
           style={{ flex: "0 0 auto" }}
-          className="mb-3 w-full bg-transparent text-center text-[28px] font-bold text-[#18414D] placeholder:text-[#18414D]/40 focus:outline-none"
+          className="mb-3 w-full bg-transparent text-left text-[28px] font-bold text-[#18414D] placeholder:text-[#18414D]/40 focus:outline-none"
         />
         <textarea
           value={body}
@@ -460,12 +451,11 @@ function IdeaAppPrototype() {
   const [view, setView] = useState("list"); // list | detail | edit | search
   const [activeId, setActiveId] = useState(null);
 
-  // persist ideas + project name to localStorage whenever they change
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify({ ideas, projectName }));
     } catch (e) {
-      // storage unavailable (private mode, quota, etc.) — fail silently
+      // storage unavailable
     }
   }, [ideas, projectName]);
 
