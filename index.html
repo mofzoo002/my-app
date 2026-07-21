@@ -306,15 +306,11 @@ function EditScreen({ idea, isNew, onCancel, onSave }) {
   useLayoutEffect(() => {
     const el = titleRef.current;
     if (!el) return;
+    el.style.textAlign = 'left';
+    el.focus();
     if (isNew) {
-      el.focus();
-      el.style.textAlign = 'left';
       el.setSelectionRange(0, 0);
-      requestAnimationFrame(() => {
-        el.style.textAlign = 'center';
-      });
     } else {
-      el.focus();
       const len = el.value.length;
       el.setSelectionRange(len, len);
     }
@@ -352,6 +348,8 @@ function EditScreen({ idea, isNew, onCancel, onSave }) {
           ref={titleRef}
           value={title}
           onChange={(e) => setTitle(e.target.value)}
+          onFocus={(e) => { e.target.style.textAlign = 'left'; }}
+          onBlur={(e) => { e.target.style.textAlign = 'center'; }}
           placeholder="アイディア"
           style={{ flex: "0 0 auto" }}
           className="mb-3 w-full bg-transparent text-center text-[28px] font-bold text-[#18414D] placeholder:text-[#18414D]/40 focus:outline-none"
