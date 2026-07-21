@@ -3,9 +3,6 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-<!-- Dynamic Island やステータスバー裏の背景色をアプリ色に合わせる設定 -->
-<meta name="theme-color" content="#2E86E0" />
-
 <title>my-app</title>
 
 <link rel="apple-touch-icon" href="icon.png">
@@ -28,8 +25,16 @@
 </script>
 
 <style>
-  html, body, #root { height: 100%; margin: 0; }
-  body { overflow-x: hidden; background-color: #2E86E0; }
+  html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+  }
+  #root {
+    min-height: 100vh;
+    min-height: -webkit-fill-available;
+  }
 </style>
 </head>
 <body>
@@ -495,7 +500,7 @@ function IdeaAppPrototype() {
   }
 
   return (
-    <div className="bg-animated relative min-h-screen w-full">
+    <div className="bg-animated relative min-h-screen w-full overflow-hidden">
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&family=Noto+Sans+JP:wght@400;500;700&display=swap');
         * { font-family: 'Zen Maru Gothic','Noto Sans JP',sans-serif; }
